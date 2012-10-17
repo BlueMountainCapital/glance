@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Dashboard</title>
+        <!-- Bootstrap -->
+        <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
+        <meta name="google" value="notranslate">
+        <meta http-equiv="Content-Language" content="en">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="style.css" rel="stylesheet">
+        <script src="jquery-latest.min.js"></script>
+        <script src="d3.v2.min.js"></script>
+        <script src="cubism.v1.min.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script src="glance.js"></script>
+    </head>
+    <body>
+        <div class="row-fluid">
+            <div id="navigation"></div>
+            <div class="hero-unit" id="metric" style="display:none;">
+                <h1>Welcome to Glance!</h1>
+                <p>Glance allows easy access to graphite metrics.</p>
+                <form id="add-metric">
+                    <input type="submit" class="btn btn-primary btn-large" value="Add a metric" />
+                </form>
+            </div>
+            <form class="form-search" id="search-form" autocomplete="off">
+                <div class="input-append span10">
+                    <input type="text" class="search-query span10" id="search" data-provide="typeahead" data-items="4" placeholder="Search" />
+                    <input type="submit" class="btn span2 btn-primary" value="Add Metric" />
+                </div>
+                <input type="button" class="btn span2 btn-danger" value="Reset" id='reset-btn' />
+            </form>
+            <div id="data"></div>
+        </div>
+    </body>
+</html>
