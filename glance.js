@@ -12,7 +12,7 @@
         deleteAllStatement = "DELETE FROM Metrics",
         db = openDatabase("Metrics-0.0.1", "1.0", "Metric names", 200000),
         context = cubism.context()
-            .serverDelay(10000)
+            .serverDelay(1000)
             .step(10000)
             .size(1280);
     
@@ -51,6 +51,24 @@
         return graphite.metric(name);
     }
     
+    function setUpD3(allMetrics) {
+        var selection = d3.select("#data")
+            .selectAll(".horizon")
+            .data(allMetrics);
+
+        selection.enter()
+            .append("div", ".bottom")
+            .attr("class", "horizon")
+            .call(context.horizon()
+                  .height(30)
+                  .colors(["#006d2c", "#31a354", "#74c476", "#bae4b3", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"])
+                  .format(d3.format(",.2f")));
+        
+        selection
+            .exit()
+            .remove();
+    }
+    
     function selectDataHandler(transaction, results) {
         getConfig(function (config) {
             var path = getPath(),
@@ -86,33 +104,28 @@
                         if (value.Name) {
                             metric = metric.alias(value.Name);
                         }
+                        if (value.Extent) {
+                            metric.extent = function () { return value.Extent; };
+                        }
                         allMetrics = allMetrics.concat(metric);
+                        setUpD3(allMetrics);
                     } else if (value.ExpansionQuery) {
                         context.graphite(config.GraphitePath)
                             .find(value.ExpansionQuery, function (error, results) {
                                 var expansionMetrics = results.map(function (result) {
-                                    return stock(config, result);
+                                    var metric = stock(config, result);
+                                    if (value.Extent) {
+                                        metric.extent = function () { return value.Extent; };
+                                    }
+                                    return metric;
                                 });
                                 allMetrics = allMetrics.concat(expansionMetrics);
+                                setUpD3(allMetrics);
                             });
                     }
                 });
             }
-            selection = d3.select("#data")
-                .selectAll(".horizon")
-                .data(allMetrics);
-
-            selection.enter()
-                .append("div", ".bottom")
-                .attr("class", "horizon")
-                .call(context.horizon()
-                      .height(30)
-                      .colors(context.horizon().colors().reverse())
-                      .format(d3.format(",.2f")));
-            
-            selection
-                .exit()
-                .remove();
+            setUpD3(allMetrics);
         });
     }
     
@@ -141,14 +154,15 @@
         });
     }
     
-    function addMetricForm() {
+    function addMetricForm(e) {
+        e.preventDefault();
         getConfig(function (config) {
             insertMetric(config.DefaultMetric);
         });
-        return false;
     }
     
-    function addMetricButton() {
+    function addMetricButton(e) {
+        e.preventDefault();
         var value = $("#search").data().typeahead.query;
         getConfig(function (config) {
             d3.json(config.GraphitePath + "/metrics/find?query=" + value, function (json) {
@@ -158,7 +172,6 @@
                 }
             });
         });
-        return false;
     }
     
     function reset() {
@@ -170,7 +183,7 @@
     
     
     function autoComplete(query, process) {
-        d3.json("configuration.json", function (config) {
+        getConfig(function (config) {
             var processedQuery = query,
                 url = "";
             if (processedQuery.indexOf(config.DefaultSearch) < 0) {
@@ -185,9 +198,10 @@
     
     function navigate() {
         var fileName = getPath();
-        d3.json("configuration.json", function (config) {
+        getConfig(function (config) {
             var key = '',
-                content = '<ul class="nav nav-pills">';
+                content = '<ul class="nav nav-pills">',
+                theme = null;
             config.Pages.forEach(function (page) {
                 var match = false,
                     linkClass = '';
@@ -196,7 +210,9 @@
                 } else {
                     linkClass = '';
                 }
-                content = content + '<li' + linkClass + '><a href="' + window.location.origin + window.location.pathname + "?path=" + page.Path + '">' + page.Name + '</a></li>';
+                content = content + '<li' + linkClass + '><a href="'
+                    + window.location.origin + window.location.pathname
+                    + "?path=" + page.Path + '">' + page.Name + '</a></li>';
             });
             content = content + '</ul>';
             $("#navigation").append(content);
@@ -206,22 +222,6 @@
     $(function () {
         navigate();
     });
-    
-    d3.json("configuration.json", function (config) {
-        var graphite = context.graphite(config.GraphitePath);
-    });
-    
-    refreshDisplay();
-    
-    d3.select("#data").selectAll(".axis")
-        .data(["top", "bottom"])
-        .enter().append("div")
-        .attr("class", function (d) { return d + " axis"; })
-        .each(function (d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
-    
-    d3.select("#data").append("div")
-        .attr("class", "rule")
-        .call(context.rule());
     
     context.on("focus", function (i) {
         d3.selectAll(".value").style("right", i === null ? null : context.size() - i + "px");
@@ -233,5 +233,16 @@
         $('#add-metric').submit(addMetricForm);
         $('#search-form').submit(addMetricButton);
         $('#reset-btn').click(reset);
+        refreshDisplay();
+    
+        d3.select("#data").selectAll(".axis")
+            .data(["bottom"])
+            .enter().append("div")
+            .attr("class", function (d) { return d + " axis"; })
+            .each(function (d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+        
+        d3.select("#data").append("div")
+            .attr("class", "rule")
+            .call(context.rule());
     });
 }());

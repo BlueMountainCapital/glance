@@ -1,4 +1,7 @@
-glance
-======
+Glance: Web Metrics dashboard
+=============================
 
-Web dashboard using Graphite, Cubism, and Bootstrap
+Glance is a web metrics dashboard which runs entirely in the browser.
+
+It uses a single configuration file, written in JSON, to control the process of displaying values in the browser.
+

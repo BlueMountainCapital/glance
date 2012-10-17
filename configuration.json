@@ -1,7 +1,7 @@
 {
-    "DefaultSearch": "corp.bcna.",
-    "DefaultMetric": "corp.bcna.nycassandra05.cpu",
-    "GraphitePath": "http://nycassandra05",
+    "DefaultSearch": "",
+    "DefaultMetric": "localdomain.localhost.cpu",
+    "GraphitePath": "http://localhost:8080",
     "Pages":
     [
         {
@@ -13,62 +13,10 @@
             "Name": "CPU Usage",
             "BaseValues": [
                 {
-                    "ExpansionQuery": "corp.bcna.*.cpu"
-                }
-            ]
-        },
-        {
-            "Path": "mdc",
-            "Name": "MDC",
-            "BaseValues":
-            [
-                {
-                    "Name":"NYMDCACHE01 CPU",
-                    "Query": "asPercent(corp.bcna.NYMDCACHE01.cpu, '1.0')"
+                    "ExpansionQuery": "*.*.*.cpu"
                 },
                 {
-                    "Name":"NYMDCACHE02 CPU",
-                    "Query": "asPercent(corp.bcna.NYMDCACHE02.cpu, '1.0')"
-                },
-                {
-                    "Name":"NYMDCACHE01 Cache",
-                    "Query": "corp.bcna.NYMDCACHE01.MarketDataServer.Cache"
-                },
-                {
-                    "Name":"NYMDCACHE02 Cache",
-                    "Query": "corp.bcna.NYMDCACHE02.MarketDataServer.Cache"
-                },
-                {
-                    "Name":"NYMDCACHE01 Journaller ShouldLoad",
-                    "Query": "corp.bcna.NYMDCACHE01.MarketDataServer.Journaller.ShouldLoad"
-                },
-                {
-                    "Name":"NYMDCACHE02 Journaller ShouldLoad",
-                    "Query": "corp.bcna.NYMDCACHE02.MarketDataServer.Journaller.ShouldLoad"
-                },
-                {
-                    "Name":"NYMDCACHE01 Journaller Load",
-                    "Query": "corp.bcna.NYMDCACHE01.MarketDataServer.Journaller.Load"
-                },
-                {
-                    "Name":"NYMDCACHE02 Journaller Load",
-                    "Query": "corp.bcna.NYMDCACHE02.MarketDataServer.Journaller.Load"
-                },
-                {
-                    "Name":"NYMDCACHE01 MarketDataStore",
-                    "Query": "corp.bcna.NYMDCACHE01.MarketDataServer.MarketDataStore"
-                },
-                {
-                    "Name":"NYMDCACHE02 MarketDataStore",
-                    "Query": "corp.bcna.NYMDCACHE02.MarketDataServer.MarketDataStore"
-                },
-                {
-                    "Name":"NYMDCACHE01 Queries",
-                    "Query": "corp.bcna.NYMDCACHE01.MarketDataServer.Queries"
-                },
-                {
-                    "Name":"NYMDCACHE02 Queries",
-                    "Query": "corp.bcna.NYMDCACHE02.MarketDataServer.Queries"
+                    "ExpansionQuery": "*.*.cpu"
                 }
             ]
         }

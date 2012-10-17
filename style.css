@@ -79,7 +79,7 @@ body {
 }
 .horizon .title {
   left: 0;
-  color: #bd6c31;
+  color: #000000f0;
 }
 
 .horizon .value {
@@ -90,4 +90,8 @@ body {
 .line {
   background: #000;
   z-index: 2;
+}
+
+.data-float {
+    float: right;
 }
