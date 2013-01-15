@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>glance | About</title>
+    <link href='http://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
+    <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link rel="stylesheet" href="font-awesome.min.css">
+    <meta name="google" value="notranslate">
+    <meta http-equiv="Content-Language" content="en">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="style.css" rel="stylesheet">
+    <link rel="shortcut icon" href="favicon.ico" />
+    <style type="text/css">
+        /* Custom container */
+        .container-narrow {
+            margin: 0 auto;
+            max-width: 700px;
+        }
+        .container-narrow > hr {
+            margin: 30px 0;
+        }
+    </style>
+  </head>
+  <body>
+      <div class="container-narrow">
+          <div>
+              <ul class="nav nav-pills pull-right">
+                  <li><a href="index.html"><i class="icon-home"></i></a></li>
+              </ul>
+              <h3 id="version"><i class="icon-dashboard"></i> Glance </h3>
+          </div>
+          <hr />
+          <div class="row-fluid">
+              <div class="span6">
+                  <p class="lead">Easily add new values.</p>
+                  <div class="row-fluid">
+                      <div class="span6">
+                          <img src="img/add-metrics.png" />
+                      </div>
+                      <div class="span6">
+                          <p>
+                              Searching for and finding new values is easy.
+                          </p>
+                      </div>
+                  </div>
+              </div>
+              <div class="span6">
+                  <p class="lead">Easily define new pages.</p>
+                  <div class="row-fluid">
+                      <div class="span12">
+                          <p>
+                              An easy-to-use API for defining new pages.
+                          </p>
+                          <pre>
+glance.page("cpu","CPU")
+      .find("*.cpu")
+      .asPercent(1.0)
+</pre>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <div class="row-fluid">
+              <div class="span6">
+                  <p class="lead">All in the browser.</p>
+                  <p>
+                      There are no dependencies on any processes running on the server.
+                  </p>
+              </div>
+              <div class="span6">
+                  <p class="lead">Open source, easily extensible.</p>
+                  <p>
+                      Using open source components, glance was designed so that users can easily develop new components, and make more use of the components.
+                  </p>
+              </div>
+          </div>
+          <div class="row-fluid">
+              <div class="span6">
+                  <p class="lead">Bring metrics in.</p>
+                  <p>
+                      Easily integrate graphite metrics. Just adding a graphite metric handler will allow users to start pulling graphite metrics into their dashboards.
+                  </p>
+              </div>
+              
+              <div class="span6">
+                  <p class="lead">Get insights out.</p>
+              </div>
+          </div>
+      </div>
+      <script src="jquery-latest.min.js"></script>
+      <script src="bootstrap/js/bootstrap.min.js"></script>
+      <script src="glance.js"></script>
+      <script>
+          $(function (e) {
+              "use strict";
+              
+              $("#version").append("<small>" + glance.version + "<\/small>");
+          });
+      </script>
+  </body>
+</html>

@@ -1,24 +1,30 @@
-/*jslint browser: true*/
-/*global $, openDatabase, cubism, d3*/
+/*jslint browser:true*/
+/*globals $,cubism,d3*/
+/* Copyright 2013 BlueMountain Capital */
+var glance = {
+    handlers: [],
+    version: "0.2-beta1"
+};
+
 (function () {
     "use strict";
-        
-    var createPageStatement = "CREATE TABLE IF NOT EXISTS Pages (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT)",
-        createMetricStatement = "CREATE TABLE IF NOT EXISTS Metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, page INTEGER, metric TEXT)",
-        selectPageStatement = "SELECT * FROM Pages WHERE Pages.path = ?",
-        selectMetricStatement = "SELECT Metrics.metric FROM Pages INNER JOIN Metrics ON Pages.id = Metrics.page WHERE Pages.path = ?",
-        insertPageStatement = "INSERT INTO Pages (path) VALUES (?)",
-        insertMetricStatement = "INSERT INTO Metrics (page, metric) VALUES (?, ?)",
-        deleteAllStatement = "DELETE FROM Metrics",
-        db = openDatabase("Metrics-0.0.1", "1.0", "Metric names", 200000),
-        context = cubism.context()
-            .serverDelay(1000)
-            .step(10000)
-            .size(1280);
-    
+
+    var context = cubism.context()
+        .serverDelay(1000)
+        .step(10000)
+        .size(1280);
+
+    function displayError(message) {
+        // Show the alert!
+        var alertList = $("#alert"),
+            alert = alertList[0];
+        alertList.css("display", "");
+        alert.innerHTML = alert.innerHTML + message + "<br/>";
+    }
+
     function getPath() {
         var search = window.location.search || "",
-            path = search.match("path=(.+)"),
+            path = search.match(new RegExp("path=(.+)")),
             fileName = '';
         if (path) {
             fileName = path[1];
@@ -26,223 +32,384 @@
         return fileName;
     }
     
-    function createTable() {
-        db.transaction(function (transaction) {
-            transaction.executeSql(createPageStatement);
-            transaction.executeSql(createMetricStatement);
-            transaction.executeSql(selectPageStatement, [getPath()], function (t, d) {
-                if (d.rows.length === 0) {
-                    transaction.executeSql(insertPageStatement, [getPath()]);
-                }
-            }, function () {
-                transaction.executeSql(insertPageStatement, [getPath()]);
-            });
-        });
+    function Metric(name, type) {
+        this.name = name;
+        this.shortName = name;
+        this.type = type;
+        this.matches = function (test) {
+            return this.name.indexOf(test) >= 0;
+        };
     }
     
-    $(createTable);
-    
-    function getConfig(callback) {
-        d3.json("configuration.json", callback);
+    function Page() {
     }
     
-    function stock(config, name, callback) {
-        var graphite = context.graphite(config.GraphitePath);
-        return graphite.metric(name);
+    
+    function GlanceMetricHandler(type) {
+        this.type = type;
     }
     
-    function setUpD3(allMetrics) {
-        var selection = d3.select("#data")
-            .selectAll(".horizon")
-            .data(allMetrics);
+    function GlanceData() {
+        function getForPath(path) {
+            return JSON.parse(localStorage.getItem("metrics-" + path)) || [];
+        }
 
-        selection.enter()
-            .append("div", ".bottom")
-            .attr("class", "horizon")
-            .call(context.horizon()
-                  .height(30)
-                  .colors(["#006d2c", "#31a354", "#74c476", "#bae4b3", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"])
-                  .format(d3.format(",.2f")));
-        
-        selection
-            .exit()
-            .remove();
+        function setForPath(path, array) {
+            return localStorage.setItem("metrics-" + path, JSON.stringify(array));
+        }
+
+        this.getAllMetrics = function (path) {
+            return getForPath(path);
+        };
+
+        this.insertMetric = function (path, metric) {
+            setForPath(path, getPath(path).concat(metric));
+        };
+
+        this.resetPath = function (path) {
+            setForPath(path, []);
+        };
     }
-    
-    function selectDataHandler(transaction, results) {
-        getConfig(function (config) {
-            var path = getPath(),
-                i = 0,
-                metrics = [],
-                found = null,
-                selection = null,
-                allMetrics = null;
+
+    glance.page = function (path, name, icon) {
+        var localPath = getPath(),
+            glance = this,
+            page = new Page();
         
-            config.Pages.forEach(function (p) {
-                if (p.Path === path) {
-                    found = p;
-                }
-            });
-            
-            if (results.rows.length === 0 && !found.BaseValues) {
-                $("#metric").css("display", "");
-            } else {
-                // if this is the first time that we are running and we just added a new metric, then we need to hide it again
-                $("#metric").css("display", "none");
-            }
-            
-            for (i = 0; i < results.rows.length; i = i + 1) {
-                metrics.push(results.rows.item(i).metric);
-            }
-            
-            allMetrics = metrics.map(function (row) { return stock(config, row); });
-                
-            if (found.BaseValues) {
-                found.BaseValues.forEach(function (value) {
-                    if (value.Query) {
-                        var metric = stock(config, value.Query);
-                        if (value.Name) {
-                            metric = metric.alias(value.Name);
-                        }
-                        if (value.Extent) {
-                            metric.extent = function () { return value.Extent; };
-                        }
-                        allMetrics = allMetrics.concat(metric);
-                        setUpD3(allMetrics);
-                    } else if (value.ExpansionQuery) {
-                        context.graphite(config.GraphitePath)
-                            .find(value.ExpansionQuery, function (error, results) {
-                                var expansionMetrics = results.map(function (result) {
-                                    var metric = stock(config, result);
-                                    if (value.Extent) {
-                                        metric.extent = function () { return value.Extent; };
-                                    }
-                                    return metric;
-                                });
-                                allMetrics = allMetrics.concat(expansionMetrics);
-                                setUpD3(allMetrics);
-                            });
+        // We need to set up the environment
+        if (localPath === path) {
+            (function () {
+                var localHandlers = glance.handlers;
+
+                document.title = "glance | " + name;
+                function doLoad() {
+                    var handlersMetrics = {};
+    
+                    function push(handlersMetrics) {
+                        return function (metric) {
+                            handlersMetrics[metric.type] = (handlersMetrics[metric.type] || []).concat(metric);
+                        };
                     }
-                });
-            }
-            setUpD3(allMetrics);
-        });
-    }
-    
-    function errorDataHandler() {
-        $("#metric").css("display", "");
-    }
-    
-    function refreshDisplayTransaction(transaction) {
-        var path = getPath();
-        transaction.executeSql(selectMetricStatement, [path], selectDataHandler, errorDataHandler);
-    }
-    
-    function refreshDisplay() {
-        db.transaction(refreshDisplayTransaction);
-    }
-    
-    function insertMetric(metric) {
-        db.transaction(function (transaction) {
-            var path = getPath();
-            transaction.executeSql(selectPageStatement, [path], function (t, d) {
-                if (d.rows.length === 1) {
-                    transaction.executeSql(insertMetricStatement, [d.rows.item(0).id, metric]);
-                    refreshDisplayTransaction(transaction);
+
+                    new GlanceData().getAllMetrics(path).forEach(push(handlersMetrics));
+
+                    localHandlers.forEach(function (handler) {
+                        page.getMetrics(handler, function (metrics) {
+                            if (handlersMetrics[handler.type] !== undefined) {
+                                handlersMetrics[handler.type].forEach(
+                                    function (metric) {
+                                        metrics.push(metric);
+                                    }
+                                );
+                            }
+                            if (metrics.length > 0) {
+                                $("#welcome-alert").css("display", "none");
+                            }
+                            handler.data(metrics);
+                        });
+                    });
                 }
-            });
-        });
-    }
-    
-    function addMetricForm(e) {
-        e.preventDefault();
-        getConfig(function (config) {
-            insertMetric(config.DefaultMetric);
-        });
-    }
-    
-    function addMetricButton(e) {
-        e.preventDefault();
-        var value = $("#search").data().typeahead.query;
-        getConfig(function (config) {
-            d3.json(config.GraphitePath + "/metrics/find?query=" + value, function (json) {
-                if (json.length === 1 && json[0].leaf === 1) {
-                    insertMetric(value);
-                    document.getElementById("search").value = "";
-                }
-            });
-        });
-    }
-    
-    function reset() {
-        db.transaction(function (transaction) {
-            transaction.executeSql(deleteAllStatement);
-            refreshDisplayTransaction(transaction);
-        });
-    }
-    
-    
-    function autoComplete(query, process) {
-        getConfig(function (config) {
-            var processedQuery = query,
-                url = "";
-            if (processedQuery.indexOf(config.DefaultSearch) < 0) {
-                processedQuery = config.DefaultSearch + processedQuery;
-            }
-            url = config.GraphitePath + "/metrics/find?query=" + processedQuery + "*";
-            d3.json(url, function (metrics) {
-                process(metrics.map(function (e) { return e.id; }));
-            });
-        });
-    }
-    
-    function navigate() {
-        var fileName = getPath();
-        getConfig(function (config) {
-            var key = '',
-                content = '<ul class="nav nav-pills">',
-                theme = null;
-            config.Pages.forEach(function (page) {
-                var match = false,
-                    linkClass = '';
-                if (page.Path === fileName) {
-                    linkClass = ' class="active"';
-                } else {
-                    linkClass = '';
-                }
-                content = content + '<li' + linkClass + '><a href="'
-                    + window.location.origin + window.location.pathname
-                    + "?path=" + page.Path + '">' + page.Name + '</a></li>';
-            });
-            content = content + '</ul>';
-            $("#navigation").append(content);
-        });
-    }
                 
-    $(function () {
-        navigate();
-    });
+                function reset(e) {
+                    e.preventDefault();
+                    var path = getPath();
+                    localHandlers.forEach(function (handler) {
+                        handler.data((page.metrics || []).filter(function (metric) {
+                            return metric.type === handler.type;
+                        }));
+                    });
+                    new GlanceData().resetPath(path);
+                }
     
-    context.on("focus", function (i) {
-        d3.selectAll(".value").style("right", i === null ? null : context.size() - i + "px");
-    });
-    
-    // This provides the "Search" box with the autocomplete functionality
-    $(function () {
-        $('#search').typeahead({source: autoComplete});
-        $('#add-metric').submit(addMetricForm);
-        $('#search-form').submit(addMetricButton);
-        $('#reset-btn').click(reset);
-        refreshDisplay();
-    
-        d3.select("#data").selectAll(".axis")
-            .data(["bottom"])
-            .enter().append("div")
-            .attr("class", function (d) { return d + " axis"; })
-            .each(function (d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+                $(function () {
+                    var title = icon
+                        ? '<i class="icon-' + icon + '"></i>'
+                        : name,
+                        line = $('#navigation'),
+                        interval = null,
+                        search = $('#search'),
+                        lastSearch = "";
+                    $("#navigation ul").append(
+                        '<li class="active"><a href="'
+                            + window.location.origin + window.location.pathname
+                            + '?path=' + path + '">' + title + '</a></li>'
+                    );
+
+                    doLoad();
+                    
+                    interval = setInterval(function () {
+                        clearInterval(interval);
+                        line.mouseout();
+                    }, 1500);
+                    
+                    line.mouseover(function () {
+                        clearInterval(interval);
+                        d3.select('#navigation').transition().style('height', '30px');
+                        d3.select('#navigation-buttons').transition().style('top', '20px');
+                        d3.select('#navigation-line').transition().style('color', '#ffffff');
+                    });
+                    line.mouseout(function () {
+                        d3.select('#navigation').transition().style('height', '5px');
+                        d3.select('#navigation-buttons').transition().style('top', '-35px');
+                        d3.select('#navigation-line').transition().style('color', '#000');
+                    });
+                    $('#search').keyup(function () {
+                        var text = $('#search').val();
+                        d3.select('#data')
+                            .selectAll('.horizon')
+                            .style('display', '')
+                            .filter(function (metric) {
+                                return metric.matches(text);
+                            })
+                            .style('display', 'none');
+                    });
+                    $('#search').typeahead({source: function (text, process) {
+                        var allMetrics = [];
+                        glance.handlers.forEach(function (handler) {
+                            handler.search(text, function (metrics) {
+                                metrics.forEach(function (metric) { allMetrics.push(metric.shortName); });
+                                process(allMetrics);
+                            });
+                        });
+                    }});
+                    
+                    d3.select("#data")
+                        .selectAll(".axis")
+                        .data(["bottom"])
+                        .enter().append("div")
+                        .attr("class", function (d) { return d + " axis"; })
+                        .each(function (d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
         
-        d3.select("#data").append("div")
-            .attr("class", "rule")
-            .call(context.rule());
-    });
+                    d3.select("#data")
+                        .append("div")
+                        .attr("class", "rule")
+                        .call(context.rule());
+
+                    d3.select("#data")
+                        .selectAll(".title")
+                        .attr("class", "label label-info title");
+
+                    context.on("focus", function (i) {
+                        d3.selectAll(".value").style("right", i === null ? null : context.size() - i + "px");
+                        var data = $("#data")[0],
+                            left = data.offsetLeft;
+                        d3.selectAll(".line")
+                            .style("position", "fixed")
+                            .style("left", i === null ? null : left + i + "px");
+                    });
+                });
+            }());
+        } else {
+            $(function () {
+                var title = icon
+                    ? '<i class="icon-' + icon + '"></i>'
+                    : name;
+                $("#navigation ul").append(
+                    '<li><a href="'
+                        + window.location.origin + window.location.pathname
+                        + '?path=' + path + '">' + title + '</a></li>'
+                );
+            });
+        }
+        return page;
+    };
+
+    glance.defaultMetric = function (defaultMetric) {
+        var data = new GlanceData(),
+            handlers = this.handlers,
+            path = getPath(),
+            type = defaultMetric.type;
+
+        $(function () {
+            function addMetricForm(e) {
+                e.preventDefault();
+                data.insertMetric(path, defaultMetric);
+                var matchingHandlers = handlers.filter(function (handler) {
+                    return type === handler.type;
+                });
+                if (matchingHandlers.length > 1) {
+                    displayError("Multiple matching handlers for type " + type);
+                } else if (matchingHandlers.length === 0) {
+                    displayError("No matching handlers for type " + type);
+                } else {
+                    matchingHandlers[0].data([defaultMetric]);
+                }
+                $("#welcome-alert").css("display", "none");
+            }
+
+            $('#add-metric').submit(addMetricForm);
+        });
+
+        return this;
+    };
+
+    glance.graphiteHandler = function (url) {
+        var handler = new GlanceMetricHandler("graphite");
+
+        handler.createMetric = function (path, isLeaf) {
+            var metric = new Metric(path, handler.type);
+            metric.isLeaf = isLeaf;
+            return metric;
+        };
+
+        handler.search = function (prefix, result) {
+            var jsonUrl = url + "/metrics/find?format=completer&query=" + prefix;
+            d3.json(jsonUrl, function (metrics) {
+                var allMetrics = [];
+                metrics.metrics.forEach(function (e) {
+                    allMetrics.push(handler.createMetric(e.path, e.is_leaf === "1"));
+                });
+                result(allMetrics);
+            });
+        };
+
+        handler.graphiteMetric = function (metric) {
+            var graphite = context.graphite(url);
+            if (metric.asPercentage) {
+                metric.name = "asPercent(" + metric.name + "," + metric.asPercentage + ")";
+            }
+            if (metric.keepLastValue) {
+                metric.name = "keepLastValue(" + metric.name + ")";
+            }
+            return graphite.metric(metric.name);
+        };
+
+        handler.data = function (allMetrics) {
+            d3.select("#data")
+                .selectAll(".horizon")
+                .data([])
+                .exit()
+                .remove();
+            
+            var selection = d3.select("#data")
+                .selectAll(".horizon")
+                .data(allMetrics.map(handler.graphiteMetric));
+
+            selection
+                .enter()
+                .append("div", ".bottom")
+                .attr("class", "horizon")
+                .call(context.horizon()
+                        .height(30)
+                        .colors(["#006d2c", "#31a354", "#74c476", "#bae4b3", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"])
+                        .format(d3.format(",.2f")));
+                    
+            selection
+                .selectAll(".title")
+                .attr("class", "label label-info title");
+
+            selection
+                .selectAll(".value")
+                .attr("class", "label label-info value");
+            
+            selection.exit()
+                .remove();
+        };
+        
+        handler.alias = function (namealiaser) {
+            var cMetric = handler.createMetric,
+                gMetric = handler.graphiteMetric;
+            handler.createMetric = function () {
+                var m = cMetric.apply(handler, arguments);
+                m.alias = namealiaser(m.name);
+                m.matches = function (test) {
+                    return this.alias.indexOf(test) >= 0 || this.name.indexOf(test) >= 0;
+                };
+                return m;
+            };
+            handler.graphiteMetric = function (metric) {
+                var m = gMetric(metric);
+                m = m.alias(metric.alias);
+                return m;
+            };
+            return handler;
+        };
+        
+        handler.startSearches = function (prefix) {
+            var previousSearch = handler.search;
+            handler.search = function (search, callback) {
+                previousSearch(prefix + search, function (metrics) {
+                    metrics.forEach(function (metric) {
+                        metric.shortName = metric.name.substr(prefix.length);
+                    });
+                    callback(metrics);
+                });
+            };
+            return this;
+        };
+
+        this.handlers.push(handler);
+        return handler;
+    };
+
+    function MetricHolder() {
+        this.metrics = [];
+    }
+
+    MetricHolder.prototype.push = function (metric) {
+        this.metrics.push(metric);
+    };
+
+    Page.prototype.getMetrics = function (handler, callback) {
+        this.retrieveMetrics(handler, callback, new MetricHolder());
+    };
+
+    Page.prototype.retrieveMetrics = function (handler, callback) {
+        callback([]);
+    };
+
+    Page.prototype.metrics = function (cb) {
+        var prevGetMetrics = this.retrieveMetrics;
+        this.retrieveMetrics = function (handler, callback, allMetrics) {
+            cb(handler, function (metrics) {
+                metrics.forEach(function (metric) { if (metric.isLeaf) { allMetrics.push(metric); } });
+                callback(allMetrics.metrics);
+            });
+            prevGetMetrics(handler, callback, allMetrics);
+        };
+        return this;
+    };
+
+    Page.prototype.search = function (string) {
+        this.metrics(function (handler, callback) {
+            handler.search(string, callback);
+        });
+        return this;
+    };
+
+    Page.prototype.call = function (cb) {
+        var prevGetMetrics = this.retrieveMetrics;
+        this.retrieveMetrics = function (handler, callback, allMetrics) {
+            prevGetMetrics(handler, function (metrics) {
+                metrics.forEach(cb);
+                callback(metrics);
+            }, allMetrics);
+        };
+        return this;
+    };
+
+    Page.prototype.sort = function (comparer) {
+        var prevGetMetrics = this.retrieveMetrics;
+        this.retrieveMetrics = function (handler, callback, allMetrics) {
+            prevGetMetrics(handler, function (metrics) {
+                metrics.sort(comparer || handler.comparer);
+                callback(metrics);
+            }, allMetrics);
+        };
+        return this;
+    };
+    
+    Page.prototype.asPercent = function (percentage) {
+        this.call(function (metric) {
+            metric.asPercentage = percentage;
+        });
+        return this;
+    };
+    
+    Page.prototype.keepLast = function () {
+        this.call(function (metric) {
+            metric.keepLastValue = true;
+        });
+        return this;
+    };
 }());
