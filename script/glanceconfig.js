@@ -73,8 +73,8 @@
         .search("*.eth0.rx.bytes")
         .search("*.eth0.tx.bytes")
         .call(function (metric) {
-            if (metric.name.indexOf(".rx") > 0) {
-                metric.name = "scale(" + metric.name + ",-1)";
+            if (metric.path.indexOf(".rx") > 0) {
+                metric.path = "scale(" + metric.path + ",-1)";
             }
         }).sort(byNetworkPreference);
     glance.page("olympus", 'Olympus')
@@ -92,12 +92,10 @@
         .search("*.cassandra.pending_compactions")
         .keepLast()
         .sort(byMetric);
-    glance.page("dev-test", 'scratchpad', 'edit')
-        .search("nycassandra05.cpu")
-        .search("nycassandra06.cpu")
-        .sort(byMetric);
+    
+    glance.defaultMetric(new glance.metric("nycassandra05.cpu", "graphite"));
 
-    glance.graphiteHandler("http://nycassandra05")
+    glance.graphite("http://nycassandra05")
         .alias(
             function (name) {
                 var nameSplit = name.split('.'),
@@ -136,5 +134,7 @@
                 }
                 return name;
             }
-        ).startSearches("corp.bcna.");
+        ).startSearches("corp.bcna.")
+        // our base step is 5 seconds
+        .baseStep(5 * 1000);
 }());

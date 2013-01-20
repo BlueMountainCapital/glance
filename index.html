@@ -2,13 +2,10 @@
 <html lang="en">
     <head>
         <title>glance</title>
-        <link href='http://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
-        <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
-        <link rel="stylesheet" href="font-awesome.min.css">
         <meta name="google" value="notranslate">
         <meta http-equiv="Content-Language" content="en">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="style.css" rel="stylesheet">
+        <link href="style/style.css" rel="stylesheet">
     </head>
     <body>
         <p style="position:fixed; right:7px; bottom:0px; font-size:8px;" id="version" class="muted"></p>
@@ -19,9 +16,8 @@
                 </div>
                 <div id="navigation-buttons" class="row-fluid" style="position:fixed; top:20px; width:100%;">
                     <ul class="nav nav-pills span8" id="navigation-pills">
-                        <li>
-                            <a href="about.html"><i class="icon-info-sign"></i></a>
-                        </li>
+                        <li><a href="#share" id="share" style="display:none;"><i class="icon-share-alt"></i></a></li>
+                        <li><a href="about.html"><i class="icon-info-sign"></i></a></li>
                     </ul>
                     <form class="span4 form-search" id="search-form" autocomplete="off">
                         <div class="input-append">
@@ -31,35 +27,32 @@
                     </form>
                 </div>
             </div>
-            <div id="possible-metrics">
-                <ul>
-                    
-                </ul>
-            </div>
             <div class="alert" id="alert" style="display:none;">
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
             </div>
             <div class="hero-unit" id="welcome-alert">
                 <h1>Welcome to Glance! <i class="icon-dashboard"></i></h1>
                 <p><strong>Glance</strong> allows easy access to metrics.</p>
-                <form id="add-metric">
+                <form id="add-metric" style="display:none;">
                     <input type="submit" class="btn btn-primary btn-large" value="Add a metric" />
                 </form>
             </div>
-            <div id="data" class="data-float"></div>
+            <div id="data" class="data-float" style="z-index:-1;"></div>
         </div>
-        <script src="jquery-latest.min.js"></script>
-        <script src="d3.v3.js"></script>
-        <script src="cubism.v1.js"></script>
-        <script src="bootstrap/js/bootstrap.min.js"></script>
-        <script src="glance.js"></script>
-        <script src="glanceconfig.js"></script>
+        <script src="script/jquery-latest.min.js"></script>
+        <script src="script/d3.v3.js"></script>
+        <script src="script/d3.horizon.v0.js"></script>
+        <script src="style/bootstrap/js/bootstrap.min.js"></script>
+        <script src="script/glance.js"></script>
+        <script src="script/glanceconfig.js"></script>
           <script>
-              $(function () {
-                  "use strict";
-                  
-                  $("#version").append(glance.version);
-              });
-          </script>
+            /*globals glance,$*/
+            $(function () {
+                "use strict";
+                
+                var v = glance.version;
+                $('#version').append(v);
+            });
+        </script>
     </body>
 </html>

@@ -2,14 +2,11 @@
 <html lang="en">
   <head>
     <title>glance | About</title>
-    <link href='http://fonts.googleapis.com/css?family=Ubuntu' rel='stylesheet' type='text/css'>
-    <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
-    <link rel="stylesheet" href="font-awesome.min.css">
     <meta name="google" value="notranslate">
     <meta http-equiv="Content-Language" content="en">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="style.css" rel="stylesheet">
-    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="stylesheet" href="style/style.css">
+    <link rel="shortcut icon" href="img/favicon.ico" />
     <style type="text/css">
         /* Custom container */
         .container-narrow {
@@ -27,7 +24,7 @@
               <ul class="nav nav-pills pull-right">
                   <li><a href="index.html"><i class="icon-home"></i></a></li>
               </ul>
-              <h3 id="version"><i class="icon-dashboard"></i> Glance </h3>
+              <h3><i class="icon-dashboard"></i> Glance <small id="version"></small></h3>
           </div>
           <hr />
           <div class="row-fluid">
@@ -64,7 +61,7 @@ glance.page("cpu","CPU")
               <div class="span6">
                   <p class="lead">All in the browser.</p>
                   <p>
-                      There are no dependencies on any processes running on the server.
+                      There are no dependencies on anything running on the server.
                   </p>
               </div>
               <div class="span6">
@@ -72,6 +69,12 @@ glance.page("cpu","CPU")
                   <p>
                       Using open source components, glance was designed so that users can easily develop new components, and make more use of the components.
                   </p>
+                  <ul>
+                      <li><a href="http://d3js.org/">d3.js</a> - Data driven documents</li>
+                      <li><a href="http://twitter.github.com/bootstrap/">Bootstrap</a> - UI environment from Twitter</li>
+                      <li><a href="http://fortawesome.github.com/Font-Awesome/">Font Awesome</a> - Great icons for bootstrap</li> 
+                      <li><a href="http://font.ubuntu.com/">Ubuntu font</a> - Font designed by Canonical for the Ubuntu Linux distribution</li> 
+                  </ul>
               </div>
           </div>
           <div class="row-fluid">
@@ -87,15 +90,17 @@ glance.page("cpu","CPU")
               </div>
           </div>
       </div>
-      <script src="jquery-latest.min.js"></script>
-      <script src="bootstrap/js/bootstrap.min.js"></script>
-      <script src="glance.js"></script>
+      <script src="script/jquery-latest.min.js"></script>
+      <script src="style/bootstrap/js/bootstrap.min.js"></script>
+      <script src="script/glance.min.js"></script>
       <script>
-          $(function (e) {
-              "use strict";
-              
-              $("#version").append("<small>" + glance.version + "<\/small>");
-          });
+        /*globals glance,$*/
+        $(function () {
+            "use strict";
+            
+            var v = glance.version;
+            $('#version').append(v);
+        });
       </script>
   </body>
 </html>

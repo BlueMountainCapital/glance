@@ -1,3 +1,7 @@
+@import url('http://fonts.googleapis.com/css?family=Ubuntu');
+@import url('bootstrap/css/bootstrap.css');
+@import url('font-awesome.min.css');
+
 body {
   margin: 30px;
 }
@@ -89,11 +93,17 @@ a {
     position: absolute;
     font-size: 10px;
     white-space: nowrap;
-    font-family: ubuntu;
+    font-family: 'Ubuntu';
 }
 
-.horizon .updated {
-    background-color: orange;
+.horizon .remove {
+    bottom: 2px;
+    line-height: 13px;
+    margin: 0 6px;
+    position: absolute;
+    font-size: 10px;
+    white-space: nowrap;
+    font-family: 'Ubuntu';
 }
 
 .horizon .value {
