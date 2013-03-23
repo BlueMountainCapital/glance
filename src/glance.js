@@ -1,10 +1,10 @@
 
-// script/glance/glance-core.js
+// src/glance/glance-core.js
 /*jslint browser:true*/
 /*globals $,d3*/
 
 var glance = {
-    version: "0.2-beta2",
+    version: "0.2-beta3",
     branch: "graphs"
 };
 
@@ -208,7 +208,7 @@ var glance = {
         return this;
     };
 }());
-// script/glance/glance-data.js
+// src/glance/glance-data.js
 /*globals glance,localStorage*/
 (function () {
     "use strict";
@@ -245,7 +245,7 @@ var glance = {
         }
     };
 }());
-// script/glance/glance-graphite.js
+// src/glance/glance-graphite.js
 /*globals d3,glance*/
 (function () {
     "use strict";
@@ -356,7 +356,7 @@ var glance = {
         return handler;
     };
 }());
-// script/glance/glance-graphs.js
+// src/glance/glance-graphs.js
 /*jslint browser:true*/
 /*globals d3,$,glance*/
 (function () {
@@ -409,7 +409,28 @@ var glance = {
                     start = new Date(now - (1280 * step)),
                     end = new Date(now),
                     format = d3.format(metric.format()),
-                    cancellation = null;
+                    cancellation = null,
+                    calculate = function () {
+                        metric.calculate(start, end, step, function (error, values) {
+                            if (error) {
+                                glance.displayError(error);
+                            } else {
+                                metric.values = values;
+                                var lastValue = values[values.length - 1];
+                                s.select('.value')
+                                    .text(format(lastValue[1]));
+                                s.select('.svg-data')
+                                    .data([values])
+                                    .call(chart);
+                            }
+                        });
+                    },
+                    interval = setInterval(function () {
+                        now = Date.now() - step;
+                        start = new Date(now - (1280 * step));
+                        end = new Date(now);
+                        calculate();
+                    }, step);
                 s.select('.title').text(metric.alias || metric.name);
                 s.on('mousemove', function (d, i) {
                     var box = s[0][0],
@@ -441,27 +462,6 @@ var glance = {
                 }
                 
                 if (metric.calculate) {
-                    var calculate = function () {
-                        metric.calculate(start, end, step, function (error, values) {
-                            if (error) {
-                                glance.displayError(error);
-                            } else {
-                                metric.values = values;
-                                var lastValue = values[values.length - 1];
-                                s.select('.value')
-                                    .text(format(lastValue[1]));
-                                s.select('.svg-data')
-                                    .data([values])
-                                    .call(chart);
-                            }
-                        });
-                    },
-                        interval = setInterval(function () {
-                            now = Date.now() - step;
-                            start = new Date(now - (1280 * step));
-                            end = new Date(now);
-                            calculate();
-                        }, step);
                     cancellation = function () {
                         clearInterval(interval);
                         metric.cancel();
@@ -484,7 +484,7 @@ var glance = {
     
     glance.graphs = new Graphs();
 }());
-// script/glance/glance-metric.js
+// src/glance/glance-metric.js
 /*globals glance*/
 (function () {
     "use strict";
@@ -515,7 +515,7 @@ var glance = {
     
     glance.metric = Metric;
 }());
-// script/glance/glance-persistent.js
+// src/glance/glance-persistent.js
 /*globals glance,$*/
 (function () {
     "use strict";
@@ -527,7 +527,7 @@ var glance = {
         });
     };
 }());
-// script/glance/glance-tab.js
+// src/glance/glance-tab.js
 /*globals glance*/
 (function () {
     "use strict";

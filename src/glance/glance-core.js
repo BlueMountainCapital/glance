@@ -2,7 +2,7 @@
 /*globals $,d3*/
 
 var glance = {
-    version: "0.2-beta2",
+    version: "0.2-beta3",
     branch: "graphs"
 };
 

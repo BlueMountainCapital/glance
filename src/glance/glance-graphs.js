@@ -50,7 +50,28 @@
                     start = new Date(now - (1280 * step)),
                     end = new Date(now),
                     format = d3.format(metric.format()),
-                    cancellation = null;
+                    cancellation = null,
+                    calculate = function () {
+                        metric.calculate(start, end, step, function (error, values) {
+                            if (error) {
+                                glance.displayError(error);
+                            } else {
+                                metric.values = values;
+                                var lastValue = values[values.length - 1];
+                                s.select('.value')
+                                    .text(format(lastValue[1]));
+                                s.select('.svg-data')
+                                    .data([values])
+                                    .call(chart);
+                            }
+                        });
+                    },
+                    interval = setInterval(function () {
+                        now = Date.now() - step;
+                        start = new Date(now - (1280 * step));
+                        end = new Date(now);
+                        calculate();
+                    }, step);
                 s.select('.title').text(metric.alias || metric.name);
                 s.on('mousemove', function (d, i) {
                     var box = s[0][0],
@@ -82,27 +103,6 @@
                 }
                 
                 if (metric.calculate) {
-                    var calculate = function () {
-                        metric.calculate(start, end, step, function (error, values) {
-                            if (error) {
-                                glance.displayError(error);
-                            } else {
-                                metric.values = values;
-                                var lastValue = values[values.length - 1];
-                                s.select('.value')
-                                    .text(format(lastValue[1]));
-                                s.select('.svg-data')
-                                    .data([values])
-                                    .call(chart);
-                            }
-                        });
-                    },
-                        interval = setInterval(function () {
-                            now = Date.now() - step;
-                            start = new Date(now - (1280 * step));
-                            end = new Date(now);
-                            calculate();
-                        }, step);
                     cancellation = function () {
                         clearInterval(interval);
                         metric.cancel();

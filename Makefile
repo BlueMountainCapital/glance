@@ -1,20 +1,20 @@
 all: prod	dev
 
-prod: script/glance.min.js
+prod: src/glance.min.js
 
 bin:
 	mkdir bin && cd bin && (curl http://closure-compiler.googlecode.com/files/compiler-latest.zip > compiler-latest.zip || wget -c http://closure-compiler.googlecode.com/files/compiler-latest.zip) && unzip compiler-latest.zip
 
-script/glance.min.js: bin script/glance/*.js
-	java -jar bin/compiler.jar --js script/glance/*.js --js_output_file script/glance.min.js
+src/glance.min.js: bin src/glance/*.js
+	java -jar bin/compiler.jar --js src/glance/*.js --js_output_file src/glance.min.js
 
-script/glance.js: script/glance/*.js
-	echo "" > script/glance.js && for file in script/glance/*.js; do echo "// $$file" >> script/glance.js; cat $$file >> script/glance.js; echo "" >> script/glance.js; done
+src/glance.js: src/glance/*.js
+	echo "" > src/glance.js && for file in src/glance/*.js; do echo "// $$file" >> src/glance.js; cat $$file >> src/glance.js; echo "" >> src/glance.js; done
 
-dev: script/glance.js
+dev: src/glance.js
 
 clean:
-	rm -f script/glance.js script/glance.min.js
+	rm -f src/glance.js src/glance.min.js
 
 realclean:	clean
 	rm -rf bin/
