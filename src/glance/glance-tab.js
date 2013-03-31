@@ -18,11 +18,11 @@
     tab_prototype.metrics = function (cb) {
         var prevGetMetrics = this.retrieveMetrics;
         this.retrieveMetrics = function (handler, callback, allMetrics) {
+            prevGetMetrics(handler, callback, allMetrics);
             cb(handler, function (metrics) {
                 metrics.forEach(function (metric) { if (metric.isLeaf) { allMetrics.push(metric); } });
                 callback(allMetrics);
             });
-            prevGetMetrics(handler, callback, allMetrics);
         };
         return this;
     };

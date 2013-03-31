@@ -5,7 +5,7 @@
 
 var glance = {
     version: "0.2-beta3",
-    branch: "graphs"
+    branch: "demo"
 };
 
 (function () {
@@ -29,10 +29,50 @@ var glance = {
         return fileName;
     }
     
+    function Handler(type) {
+        this.type = type;
+    }
+    
     glance.handler = function (type) {
-        return {
-            type: type
+        return new Handler(type);
+    };
+    
+    var handler = Handler.prototype;
+    
+    handler.alias = function (namealiaser) {
+        var h = this,
+            cMetric = h.createMetric;
+        
+        h.createMetric = function () {
+            var m = cMetric.apply(h, arguments);
+            m.alias = namealiaser(m.name);
+            m.matches = function (test) {
+                return this.alias.indexOf(test) >= 0 || this.name.indexOf(test) >= 0;
+            };
+            return m;
         };
+        return h;
+    };
+    
+    handler.startSearches = function (prefix) {
+        var h = this,
+            previousSearch = h.search,
+            previousCreateMetric = h.createMetric;
+        h.search = function (search, callback) {
+            previousSearch(prefix + search, function (metrics) {
+                metrics.forEach(function (metric) {
+                    metric.name = metric.path.substr(prefix.length);
+                });
+                callback(metrics);
+            });
+        };
+        h.createMetric = function (path, isLeaf) {
+            if (path.indexOf(prefix) !== 0) {
+                path = prefix + path;
+            }
+            return previousCreateMetric(path, isLeaf);
+        };
+        return this;
     };
     
     glance.handlers = {
@@ -208,6 +248,7 @@ var glance = {
         return this;
     };
 }());
+
 // src/glance/glance-data.js
 /*globals glance,localStorage*/
 (function () {
@@ -243,6 +284,57 @@ var glance = {
                 return id !== identifier;
             }));
         }
+    };
+}());
+// src/glance/glance-demo.js
+/*globals d3,glance*/
+(function () {
+    "use strict";
+    
+    glance.demo = function (metrics) {
+        var handler = glance.handler("demo");
+
+        handler.createMetric = function (path, isLeaf, limits) {
+            var metric = new glance.metric(path, handler.type);
+            metric.path = path;
+            metric.isLeaf = isLeaf;
+            metric.getPath = function () {
+                return path;
+            };
+            // Because this is a demo, and there is no request that should be cancelled, the cancel function is a no-op.
+            metric.cancel = function () {
+            };
+            
+            metric.calculate = function (start, stop, step, callback) {
+                var limiter = (limits || [0.0, 1.0]).sort(),
+                    current = start.valueOf(),
+                    range = limiter[1] - limiter[0],
+                    lastValue = Math.random() * range + limiter[0],
+                    upDownRange = range / 10,
+                    values = [[current, lastValue]];
+                while (current < stop.valueOf()) {
+                    current = current + step;
+                    lastValue = Math.min(Math.max(lastValue + (Math.random() * upDownRange * (Math.random() > 0.5 ? 1 : -1)), limiter[0]), limiter[1]);
+                    values.push([current, lastValue]);
+                }
+                
+                callback(null, values);
+            };
+            return metric;
+        };
+
+        handler.search = function (prefix, result) {
+            result(metrics.filter(function (m) {
+                return m.matches(prefix);
+            }).map(function (m) {
+                var metric = handler.createMetric(m.path, true, m.limits);
+                metric.name = m.alias || m.name || m.path;
+                return metric;
+            }));
+        };
+
+        glance.handlers.add(handler);
+        return handler;
     };
 }());
 // src/glance/glance-graphite.js
@@ -364,7 +456,8 @@ var glance = {
     function Graphs() {
     }
     
-    var graphs_prototype = Graphs.prototype;
+    var graphs_prototype = Graphs.prototype,
+        eons = 1280;
     
     graphs_prototype.horizon = function (handler) {
         return function (selection) {
@@ -372,9 +465,9 @@ var glance = {
                 .append("div", ".bottom")
                 .attr("class", "horizon " + handler.type)
                 .style("height", "20px")
-                .style("width", "1280px"),
+                .style("width", eons + "px"),
                 chart = d3.horizon()
-                .width(1280)
+                .width(eons)
                 .height(20)
                 .bands(5)
                 .mode("offset");
@@ -384,7 +477,7 @@ var glance = {
                 .attr("class", "label label-info value");
             horizon.append("svg")
                 .attr('class', 'svg-data')
-                .attr("width", "1280px")
+                .attr("width", eons + "px")
                 .attr("height", "20px");
             horizon.each(function (metric) {
                 if (metric.remove) {
@@ -406,17 +499,27 @@ var glance = {
                 var s = d3.select(this),
                     step = 1e4,
                     now = Date.now() - step,
-                    start = new Date(now - (1280 * step)),
+                    start = new Date(now - (eons * step)),
                     end = new Date(now),
                     format = d3.format(metric.format()),
                     cancellation = null,
                     calculate = function () {
                         metric.calculate(start, end, step, function (error, values) {
+                            var v = [], lastValue = null, i = 0;
                             if (error) {
                                 glance.displayError(error);
                             } else {
+                                if (values.length < eons) {
+                                    for (i = 0; i < eons - values.length; i = i + 1) {
+                                        v[i] = metric.values[i + values.length];
+                                    }
+                                    for (i = 0; i < values.length; i = i + 1) {
+                                        v[i + (eons - values.length)] = values[i];
+                                    }
+                                    values = v;
+                                }
                                 metric.values = values;
-                                var lastValue = values[values.length - 1];
+                                lastValue = values[values.length - 1];
                                 s.select('.value')
                                     .text(format(lastValue[1]));
                                 s.select('.svg-data')
@@ -427,7 +530,7 @@ var glance = {
                     },
                     interval = setInterval(function () {
                         now = Date.now() - step;
-                        start = new Date(now - (1280 * step));
+                        start = end;
                         end = new Date(now);
                         calculate();
                     }, step);
@@ -548,11 +651,11 @@ var glance = {
     tab_prototype.metrics = function (cb) {
         var prevGetMetrics = this.retrieveMetrics;
         this.retrieveMetrics = function (handler, callback, allMetrics) {
+            prevGetMetrics(handler, callback, allMetrics);
             cb(handler, function (metrics) {
                 metrics.forEach(function (metric) { if (metric.isLeaf) { allMetrics.push(metric); } });
                 callback(allMetrics);
             });
-            prevGetMetrics(handler, callback, allMetrics);
         };
         return this;
     };

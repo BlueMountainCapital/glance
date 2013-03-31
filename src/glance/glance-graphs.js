@@ -5,7 +5,8 @@
     function Graphs() {
     }
     
-    var graphs_prototype = Graphs.prototype;
+    var graphs_prototype = Graphs.prototype,
+        eons = 1280;
     
     graphs_prototype.horizon = function (handler) {
         return function (selection) {
@@ -13,9 +14,9 @@
                 .append("div", ".bottom")
                 .attr("class", "horizon " + handler.type)
                 .style("height", "20px")
-                .style("width", "1280px"),
+                .style("width", eons + "px"),
                 chart = d3.horizon()
-                .width(1280)
+                .width(eons)
                 .height(20)
                 .bands(5)
                 .mode("offset");
@@ -25,7 +26,7 @@
                 .attr("class", "label label-info value");
             horizon.append("svg")
                 .attr('class', 'svg-data')
-                .attr("width", "1280px")
+                .attr("width", eons + "px")
                 .attr("height", "20px");
             horizon.each(function (metric) {
                 if (metric.remove) {
@@ -47,17 +48,27 @@
                 var s = d3.select(this),
                     step = 1e4,
                     now = Date.now() - step,
-                    start = new Date(now - (1280 * step)),
+                    start = new Date(now - (eons * step)),
                     end = new Date(now),
                     format = d3.format(metric.format()),
                     cancellation = null,
                     calculate = function () {
                         metric.calculate(start, end, step, function (error, values) {
+                            var v = [], lastValue = null, i = 0;
                             if (error) {
                                 glance.displayError(error);
                             } else {
+                                if (values.length < eons) {
+                                    for (i = 0; i < eons - values.length; i = i + 1) {
+                                        v[i] = metric.values[i + values.length];
+                                    }
+                                    for (i = 0; i < values.length; i = i + 1) {
+                                        v[i + (eons - values.length)] = values[i];
+                                    }
+                                    values = v;
+                                }
                                 metric.values = values;
-                                var lastValue = values[values.length - 1];
+                                lastValue = values[values.length - 1];
                                 s.select('.value')
                                     .text(format(lastValue[1]));
                                 s.select('.svg-data')
@@ -68,7 +79,7 @@
                     },
                     interval = setInterval(function () {
                         now = Date.now() - step;
-                        start = new Date(now - (1280 * step));
+                        start = end;
                         end = new Date(now);
                         calculate();
                     }, step);

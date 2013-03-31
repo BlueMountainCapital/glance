@@ -8,15 +8,22 @@ Version of glance in use
 
 ### Tab page(path, name, icon)
 
-Adds a page defined by the path. The name is used in navigation (unless icon is defined), and in the page title. If icon is defined, then it is used in the navigation bar.
+Adds a page defined by the path. The name is used in navigation (unless icon is
+defined), and in the page title. If icon is defined, then it is used in the
+navigation bar.
 
 ### defaultMetric(metric)
 
-Defines the default metric to use when showing the message that no metrics were defined for the page.
+Defines the default metric to use when showing the message that no metrics were
+defined for the page.
 
 ### Handler graphite(host)
 
 Defines a metric handler using graphite.
+
+### Handler demo(allMetrics)
+
+Defines a demonstration handler.
 
 ## handler
 
@@ -26,7 +33,15 @@ Defines a function to alias an incoming metric.
 
 ### handler startSearches(string)
 
-Starts all searches with this string; it allows for easier searching if all of the metrics start with the same clause.
+Starts all searches with this string; it allows for easier searching if all of
+the metrics start with the same clause.
+
+## Graphite handler
+
+### handler baseStep(step)
+
+Defines the base step that a graphite installation uses. Default is 10s; should
+be set to match the graphite configuration.
 
 ## metric
 

@@ -3,7 +3,7 @@
 
 var glance = {
     version: "0.2-beta3",
-    branch: "graphs"
+    branch: "demo"
 };
 
 (function () {
@@ -27,10 +27,50 @@ var glance = {
         return fileName;
     }
     
+    function Handler(type) {
+        this.type = type;
+    }
+    
     glance.handler = function (type) {
-        return {
-            type: type
+        return new Handler(type);
+    };
+    
+    var handler = Handler.prototype;
+    
+    handler.alias = function (namealiaser) {
+        var h = this,
+            cMetric = h.createMetric;
+        
+        h.createMetric = function () {
+            var m = cMetric.apply(h, arguments);
+            m.alias = namealiaser(m.name);
+            m.matches = function (test) {
+                return this.alias.indexOf(test) >= 0 || this.name.indexOf(test) >= 0;
+            };
+            return m;
         };
+        return h;
+    };
+    
+    handler.startSearches = function (prefix) {
+        var h = this,
+            previousSearch = h.search,
+            previousCreateMetric = h.createMetric;
+        h.search = function (search, callback) {
+            previousSearch(prefix + search, function (metrics) {
+                metrics.forEach(function (metric) {
+                    metric.name = metric.path.substr(prefix.length);
+                });
+                callback(metrics);
+            });
+        };
+        h.createMetric = function (path, isLeaf) {
+            if (path.indexOf(prefix) !== 0) {
+                path = prefix + path;
+            }
+            return previousCreateMetric(path, isLeaf);
+        };
+        return this;
     };
     
     glance.handlers = {
